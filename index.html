@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesh Calc — Wire Mesh Open Area Calculator</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e4e4e7;
+      --muted: #9ca3af;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.25rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+    .container {
+      display: flex;
+      gap: 2rem;
+      max-width: 900px;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      flex: 1;
+      min-width: 300px;
+    }
+    .panel h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1.25rem;
+      color: var(--accent);
+    }
+    .field {
+      margin-bottom: 1.25rem;
+    }
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .input-row input {
+      flex: 1;
+    }
+    input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.6rem 0.75rem;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+    select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.6rem 0.5rem;
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+      min-width: 65px;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .result-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+    .result-card .label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.3rem;
+    }
+    .result-card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+    .result-card .unit {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-left: 0.25rem;
+    }
+    .result-card .value.green { color: var(--green); }
+    .result-card .value.yellow { color: var(--yellow); }
+    .result-card .value.red { color: var(--red); }
+
+    .mesh-preview {
+      margin-top: 1rem;
+    }
+    .mesh-preview canvas {
+      width: 100%;
+      height: 200px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .info {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .info code {
+      background: var(--bg);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+
+    .mesh-count-field {
+      margin-top: 0.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 680px) {
+      .container { flex-direction: column; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🔩 Mesh Calc</h1>
+  <p class="subtitle">Wire mesh filter — open area calculator</p>
+
+  <div class="container">
+    <div class="panel">
+      <h2>Inputs</h2>
+      <div class="field">
+        <label>Wire Diameter</label>
+        <div class="input-row">
+          <input type="number" id="wireDiam" value="0.5" min="0.001" step="any" placeholder="e.g. 0.5">
+          <select id="wireUnit">
+            <option value="mm" selected>mm</option>
+            <option value="in">in</option>
+            <option value="gauge">gauge</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Opening / Gap Size</label>
+        <div class="input-row">
+          <input type="number" id="gapSize" value="1.0" min="0.001" step="any" placeholder="e.g. 1.0">
+          <select id="gapUnit">
+            <option value="mm" selected>mm</option>
+            <option value="in">in</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Filter Diameter (optional — for total area)</label>
+        <div class="input-row">
+          <input type="number" id="filterDiam" value="" min="0" step="any" placeholder="e.g. 50">
+          <select id="filterUnit">
+            <option value="mm" selected>mm</option>
+            <option value="in">in</option>
+          </select>
+        </div>
+      </div>
+      <div class="field mesh-count-field">
+        <label>Mesh Count (wires per inch) — auto-calculated</label>
+        <div class="input-row">
+          <input type="number" id="meshCount" readonly tabindex="-1" style="opacity:0.7;cursor:default">
+        </div>
+      </div>
+      <div class="info">
+        <strong>Formula:</strong><br>
+        <code>Open Area % = (gap / (gap + wire))² × 100</code><br><br>
+        Assumes square woven mesh with equal spacing in both directions. Wire gauge uses US standard (AWG → mm).
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Results</h2>
+      <div class="results">
+        <div class="result-card">
+          <div class="label">Open Area</div>
+          <div class="value" id="openPct">—</div>
+        </div>
+        <div class="result-card">
+          <div class="label">Closed (Wire) Area</div>
+          <div class="value" id="closedPct" style="font-size:1.2rem;color:var(--muted)">—</div>
+        </div>
+        <div class="result-card" id="totalAreaCard" style="display:none">
+          <div class="label">Total Open Area</div>
+          <div class="value" id="totalArea">—</div>
+        </div>
+        <div class="result-card" id="totalFilterCard" style="display:none">
+          <div class="label">Total Filter Area</div>
+          <div class="value" id="totalFilterArea" style="font-size:1.2rem;color:var(--muted)">—</div>
+        </div>
+      </div>
+      <div class="mesh-preview">
+        <canvas id="meshCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // AWG gauge to mm diameter lookup
+    const GAUGE_TO_MM = {
+      0: 8.251, 1: 7.348, 2: 6.544, 3: 5.827, 4: 5.189,
+      5: 4.621, 6: 4.115, 7: 3.665, 8: 3.264, 9: 2.906,
+      10: 2.588, 11: 2.305, 12: 2.053, 13: 1.828, 14: 1.628,
+      15: 1.450, 16: 1.291, 17: 1.150, 18: 1.024, 19: 0.912,
+      20: 0.812, 21: 0.723, 22: 0.644, 23: 0.573, 24: 0.511,
+      25: 0.455, 26: 0.405, 27: 0.361, 28: 0.321, 29: 0.286,
+      30: 0.255, 31: 0.227, 32: 0.202, 33: 0.180, 34: 0.160,
+      35: 0.143, 36: 0.127, 37: 0.113, 38: 0.101, 39: 0.090,
+      40: 0.080
+    };
+
+    const IN_TO_MM = 25.4;
+
+    function toMM(val, unit) {
+      if (unit === 'in') return val * IN_TO_MM;
+      if (unit === 'gauge') return GAUGE_TO_MM[Math.round(val)] || val;
+      return val;
+    }
+
+    function formatArea(mm2) {
+      if (mm2 > 1e6) return (mm2 / 1e6).toFixed(2) + '<span class="unit">m²</span>';
+      if (mm2 > 100) return (mm2 / 100).toFixed(2) + '<span class="unit">cm²</span>';
+      return mm2.toFixed(2) + '<span class="unit">mm²</span>';
+    }
+
+    function calc() {
+      const wireDiam = parseFloat(document.getElementById('wireDiam').value) || 0;
+      const wireUnit = document.getElementById('wireUnit').value;
+      const gapSize = parseFloat(document.getElementById('gapSize').value) || 0;
+      const gapUnit = document.getElementById('gapUnit').value;
+      const filterDiam = parseFloat(document.getElementById('filterDiam').value) || 0;
+      const filterUnit = document.getElementById('filterUnit').value;
+
+      const w = toMM(wireDiam, wireUnit);
+      const g = toMM(gapSize, gapUnit);
+      const pitch = w + g;
+
+      if (w <= 0 || g <= 0 || pitch <= 0) {
+        document.getElementById('openPct').textContent = '—';
+        document.getElementById('closedPct').textContent = '—';
+        document.getElementById('meshCount').value = '';
+        return;
+      }
+
+      const openFrac = (g / pitch) ** 2;
+      const openPctVal = openFrac * 100;
+      const closedPctVal = 100 - openPctVal;
+
+      // Mesh count (wires per inch)
+      const pitchInch = pitch / IN_TO_MM;
+      const meshCount = 1 / pitchInch;
+      document.getElementById('meshCount').value = meshCount.toFixed(1);
+
+      // Color code
+      const el = document.getElementById('openPct');
+      el.innerHTML = openPctVal.toFixed(1) + '<span class="unit">%</span>';
+      el.className = 'value ' + (openPctVal >= 50 ? 'green' : openPctVal >= 25 ? 'yellow' : 'red');
+
+      document.getElementById('closedPct').innerHTML = closedPctVal.toFixed(1) + '<span class="unit">%</span>';
+
+      // Total area if filter diameter given
+      const totalCard = document.getElementById('totalAreaCard');
+      const totalFilterCard = document.getElementById('totalFilterCard');
+      if (filterDiam > 0) {
+        const fd = toMM(filterDiam, filterUnit);
+        const filterArea = Math.PI * (fd / 2) ** 2; // mm²
+        const openArea = filterArea * openFrac;
+        document.getElementById('totalArea').innerHTML = formatArea(openArea);
+        document.getElementById('totalFilterArea').innerHTML = formatArea(filterArea);
+        totalCard.style.display = '';
+        totalFilterCard.style.display = '';
+      } else {
+        totalCard.style.display = 'none';
+        totalFilterCard.style.display = 'none';
+      }
+
+      drawMesh(w, g);
+    }
+
+    function drawMesh(wireMM, gapMM) {
+      const canvas = document.getElementById('meshCanvas');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const W = rect.width, H = rect.height;
+
+      ctx.fillStyle = '#0f1117';
+      ctx.fillRect(0, 0, W, H);
+
+      const pitch = wireMM + gapMM;
+      const wireRatio = wireMM / pitch;
+      const gapRatio = gapMM / pitch;
+
+      // Fit ~8 cells
+      const cells = 8;
+      const cellPx = Math.min(W, H) / cells;
+      const wirePx = cellPx * wireRatio;
+      const gapPx = cellPx * gapRatio;
+
+      const cols = Math.ceil(W / cellPx) + 1;
+      const rows = Math.ceil(H / cellPx) + 1;
+
+      // Draw gaps (open area) as lighter
+      ctx.fillStyle = '#1e3a5f';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = c * cellPx + wirePx / 2;
+          const y = r * cellPx + wirePx / 2;
+          ctx.fillRect(x, y, gapPx, gapPx);
+        }
+      }
+
+      // Draw horizontal wires
+      ctx.fillStyle = '#6b7280';
+      for (let r = 0; r <= rows; r++) {
+        const y = r * cellPx;
+        ctx.fillRect(0, y, W, wirePx);
+      }
+
+      // Draw vertical wires with slight overlap shading
+      ctx.fillStyle = '#6b7280';
+      for (let c = 0; c <= cols; c++) {
+        const x = c * cellPx;
+        ctx.fillRect(x, 0, wirePx, H);
+      }
+
+      // Intersection highlights (wires crossing)
+      ctx.fillStyle = '#9ca3af';
+      for (let r = 0; r <= rows; r++) {
+        for (let c = 0; c <= cols; c++) {
+          ctx.fillRect(c * cellPx, r * cellPx, wirePx, wirePx);
+        }
+      }
+    }
+
+    // Bind events
+    ['wireDiam', 'wireUnit', 'gapSize', 'gapUnit', 'filterDiam', 'filterUnit'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calc);
+      document.getElementById(id).addEventListener('change', calc);
+    });
+
+    window.addEventListener('resize', calc);
+    calc();
+  </script>
+</body>
+</html>
